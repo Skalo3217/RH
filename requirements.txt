@@ -1,0 +1,6 @@
+pandas
+numpy
+yahoo_fin
+robin_stocks
+os
+datetime
