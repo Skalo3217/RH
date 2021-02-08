@@ -7,6 +7,7 @@ import os
 import datetime
 list4pandas = []
 def profits(ticker):
+    print(ticker)
     dfx = (df[df['symbol'] == ticker])
     dfxb = (dfx[dfx['side'].str.match('buy')]).copy()
     dfxb['each_trans'] = dfxb.quantity * dfxb.average_price
@@ -20,16 +21,17 @@ def profits(ticker):
     try:
         lastclose = stock_info.get_live_price(ticker)
     except Exception as e:
-        print(e)
+        lastclose = 0
     if sell_quanity != 0:
         s_average_price = sell_sum / sell_quanity
     else:
-        s_average_price = lastclose
+        s_average_price = stock_info.get_live_price(ticker)
     if sell_quanity >= buy_quanity:
         if s_average_price > 0:
             profit = sell_sum - buy_sum
+            c_roi = roi(buy_sum,(s_average_price * sell_quanity))    
+            list4pandas.append([ticker, b_average_price, buy_quanity, s_average_price, sell_quanity, c_roi, profit])
 
-        c_roi = roi(buy_sum,(s_average_price * sell_quanity))    
     elif sell_quanity <= buy_quanity:
         remaining_shares = buy_quanity - sell_quanity
         profit = s_average_price * sell_quanity
@@ -41,6 +43,7 @@ def profits(ticker):
             gain = profit + remaining_profit
             profit = gain + profit
             c_roi = roi(buy_sum,profit)
+            
         else:
             profit = (buy_quanity * lastclose)
             c_roi = roi(buy_sum,profit)
@@ -74,20 +77,15 @@ filelist = os.listdir(config.DATA_PATH)
 filename = f'stock_orders_{month}-{day}-{year}.csv'
 if filename not in filelist:
     download_csv()
-else:
-    try:
-        df = pd.read_csv(f'data/{filename}')
-        symbols = df['symbol'].tolist()
-        symbols = list(dict.fromkeys(symbols))
 
-    except Exception as e:
-        print('Failed to open csv')
-        print(e)
+df = pd.read_csv(f'{config.DATA_PATH}/{filename}')
+symbols = df['symbol'].tolist()
+symbols = list(dict.fromkeys(symbols))
+i = 0
+print(symbols)
+for each in symbols:
+    profits(each)
+    i +=1
 
-    i= 0
-    for each in symbols:
-        profits(each)
-        i +=1
-
-    df2 = pd.DataFrame(list4pandas,columns =['Symbol', 'Buy_Avg', 'Buy_Quanity', 'Sell_Avg', 'Sell_Quanity', '%_Change', 'Value'])
-    df2.to_excel('robin_hood.xlsx')
+df2 = pd.DataFrame(list4pandas,columns =['Symbol', 'Buy_Avg', 'Buy_Quanity', 'Sell_Avg', 'Sell_Quanity', '%_Change', 'Value'])
+df2.to_excel('robin_hood.xlsx', sheet_name='Current_Investments', engine='xlsxwriter')
